@@ -1,5 +1,5 @@
 /**
- * the sum of the weighted squares of the errors (or weighted residuals) between the data.y
+ * The sum of the weighted squares of the errors (or weighted residuals) between the data.y
  * and the curve-fit function.
  * @ignore
  * @param {{x:ArrayLike<number>, y:ArrayLike<number>}} data - Array of points to fit in the format [x1, x2, ... ], [y1, y2, ... ]

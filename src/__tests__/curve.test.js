@@ -23,7 +23,7 @@ test('linear regression', () => {
 });
 
 describe('curve', () => {
-  describe('Contrived problems (clean data)', () => {
+  it('Contrived problems (clean data)', () => {
     // In these cases we test the algorithm's ability to find an , we use some pre-selected values and generate the data set and see if the algorithm can get close the the exact solution
     /** @type {any} */
     const contrivedProblems = [
@@ -212,7 +212,7 @@ describe('curve', () => {
     });
   });
 
-  describe('"Real-world" problems (noisy data)', () => {
+  it('"Real-world" problems (noisy data)', () => {
     // In these problems, an imperfect/noisy set of data points is provided, so no "perfect fit" exists; we just get as close as we can
     const realWorldProblems = [
       {
