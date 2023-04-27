@@ -1,6 +1,33 @@
 import { isAnyArray } from 'is-any-array';
 
-export default function checkOptions(data, parameterizedFunction, options) {
+export interface Data<SrcType, DstType> {
+  source: SrcType[];
+  destination: DstType[];
+}
+
+export type FitFunction<SrcType, DstType> = (value: SrcType) => DstType;
+
+export interface LevenbergMarquardtOptions {
+  timeout: number;
+  minValues: number[];
+  maxValues: number[];
+  initialValues: number[];
+  weights?: number | number[];
+  damping?: number;
+  dampingStepUp?: number;
+  dampingStepDown?: number;
+  maxIterations?: number;
+  errorTolerance?: number;
+  centralDifference?: boolean;
+  gradientDifference?: number | number[];
+  improvementThreshold?: number;
+}
+
+export default function checkOptions<SrcType, DstType>(
+  data: Data<SrcType, DstType>,
+  parameterizedFunction,
+  options: LevenbergMarquardtOptions,
+) {
   let {
     timeout,
     minValues,
@@ -19,19 +46,17 @@ export default function checkOptions(data, parameterizedFunction, options) {
 
   if (damping <= 0) {
     throw new Error('The damping option must be a positive number');
-  } else if (!data.x || !data.y) {
-    throw new Error('The data parameter must have x and y elements');
   } else if (
-    !isAnyArray(data.x) ||
-    data.x.length < 2 ||
-    !isAnyArray(data.y) ||
-    data.y.length < 2
+    !isAnyArray(data.source) ||
+    data.source.length < 2 ||
+    !isAnyArray(data.destination) ||
+    data.destination.length < 2
   ) {
     throw new Error(
-      'The data parameter elements must be an array with more than 2 points',
+      'The data parameter elements must be arrays with more than 2 elements',
     );
-  } else if (data.x.length !== data.y.length) {
-    throw new Error('The data parameter elements must have the same size');
+  } else if (data.source.length !== data.destination.length) {
+    throw new Error('The data source and destination must have the same size');
   }
 
   if (!(initialValues && initialValues.length > 0)) {
@@ -41,7 +66,7 @@ export default function checkOptions(data, parameterizedFunction, options) {
   }
   let parameters = initialValues;
 
-  let nbPoints = data.y.length;
+  let nbPoints = data.destination.length;
   let parLen = parameters.length;
   maxValues = maxValues || new Array(parLen).fill(Number.MAX_SAFE_INTEGER);
   minValues = minValues || new Array(parLen).fill(Number.MIN_SAFE_INTEGER);
@@ -50,11 +75,14 @@ export default function checkOptions(data, parameterizedFunction, options) {
     throw new Error('minValues and maxValues must be the same size');
   }
 
+  let finalGradientDifference: number[] = [];
   if (typeof gradientDifference === 'number') {
-    gradientDifference = new Array(parameters.length).fill(gradientDifference);
+    finalGradientDifference = new Array(parameters.length).fill(
+      gradientDifference,
+    );
   } else if (isAnyArray(gradientDifference)) {
     if (gradientDifference.length !== parLen) {
-      gradientDifference = new Array(parLen).fill(gradientDifference[0]);
+      finalGradientDifference = new Array(parLen).fill(gradientDifference[0]);
     }
   } else {
     throw new Error(
@@ -66,8 +94,8 @@ export default function checkOptions(data, parameterizedFunction, options) {
   if (typeof weights === 'number') {
     let value = 1 / weights ** 2;
     filler = () => value;
-  } else if (isAnyArray(weights)) {
-    if (weights.length < data.x.length) {
+  } else if (isAnyArray(weights) && weights.length === data.source.length) {
+    if (weights.length < data.source.length) {
       let value = 1 / weights[0] ** 2;
       filler = () => value;
     } else {
@@ -75,11 +103,16 @@ export default function checkOptions(data, parameterizedFunction, options) {
     }
   } else {
     throw new Error(
-      'weights should be a number or array with length equal to the number of data points',
+      'weights should be a number or an array with length equal to the number of data points',
     );
   }
 
-  let checkTimeout;
+  let weightSquare = new Array(data.source.length);
+  for (let i = 0; i < nbPoints; i++) {
+    weightSquare[i] = filler(i);
+  }
+
+  let checkTimeout: () => boolean;
   if (timeout !== undefined) {
     if (typeof timeout !== 'number') {
       throw new Error('timeout should be a number');
@@ -88,11 +121,6 @@ export default function checkOptions(data, parameterizedFunction, options) {
     checkTimeout = () => Date.now() > endTime;
   } else {
     checkTimeout = () => false;
-  }
-
-  let weightSquare = new Array(data.x.length);
-  for (let i = 0; i < nbPoints; i++) {
-    weightSquare[i] = filler(i);
   }
 
   return {
@@ -107,7 +135,7 @@ export default function checkOptions(data, parameterizedFunction, options) {
     maxIterations,
     errorTolerance,
     centralDifference,
-    gradientDifference,
+    gradientDifference: finalGradientDifference,
     improvementThreshold,
   };
 }
