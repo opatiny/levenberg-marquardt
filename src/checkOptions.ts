@@ -7,11 +7,14 @@ export interface Data<SrcType, DstType> {
 
 export type FitFunction<SrcType, DstType> = (value: SrcType) => DstType;
 
+export type GetFitFunction<SrcType, DstType> = (
+  parameters: number[],
+) => FitFunction<SrcType, DstType>;
 export interface LevenbergMarquardtOptions {
-  timeout: number;
-  minValues: number[];
-  maxValues: number[];
   initialValues: number[];
+  timeout?: number;
+  minValues?: number[];
+  maxValues?: number[];
   weights?: number | number[];
   damping?: number;
   dampingStepUp?: number;
@@ -25,7 +28,7 @@ export interface LevenbergMarquardtOptions {
 
 export default function checkOptions<SrcType, DstType>(
   data: Data<SrcType, DstType>,
-  parameterizedFunction,
+  parameterizedFunction: GetFitFunction<SrcType, DstType>,
   options: LevenbergMarquardtOptions,
 ) {
   let {
@@ -116,6 +119,9 @@ export default function checkOptions<SrcType, DstType>(
   if (timeout !== undefined) {
     if (typeof timeout !== 'number') {
       throw new Error('timeout should be a number');
+    }
+    if (timeout <= 0) {
+      throw new Error('timeout should be strictly positive');
     }
     let endTime = Date.now() + timeout * 1000;
     checkTimeout = () => Date.now() > endTime;
